@@ -60,4 +60,19 @@
     <string name="err_inactivity_hours">Inactivity hours must be between %1$d and %2$d.</string>
     <string name="inactivity_warn_title">Unlock to keep your data</string>
     <string name="inactivity_warn_body">This device will erase itself in about %1$d minute(s) unless you unlock it.</string>
+
+    <!-- New toggle+configure settings UI -->
+    <string name="configure">Configure</string>
+    <string name="save_short">Save</string>
+    <string name="section_decoy">Decoy PIN</string>
+    <string name="hw_sub">Rapid power-button presses</string>
+    <string name="qs_sub">Tile in the Quick Settings shade</string>
+    <string name="decoy_sub">Duress PIN opens a decoy vault</string>
+    <string name="alert_sub">Contact + message for the alert</string>
+    <string name="inactivity_sub">Wipe after long inactivity</string>
+    <string name="responses_header">When this fires:</string>
+    <string name="resp_alert">Send covert alert</string>
+    <string name="resp_capture">Capture evidence</string>
+    <string name="resp_wipe">Factory reset the device</string>
+    <string name="resp_wipe_warn">Destructive. Needs Device Owner. Erases the phone.</string>
 </resources>

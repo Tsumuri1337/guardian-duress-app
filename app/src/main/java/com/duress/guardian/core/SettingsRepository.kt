@@ -30,19 +30,38 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_QS_TILE, DuressConfig.DEFAULT_QS_TILE_ENABLED)
         set(value) = prefs.edit().putBoolean(KEY_QS_TILE, value).apply()
 
-    // --- Response actions ---
+    /** Whether entering the duress PIN fires a response (it always opens the decoy vault). */
+    var decoyPinEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PIN_TRIGGER, true)
+        set(value) = prefs.edit().putBoolean(KEY_PIN_TRIGGER, value).apply()
 
-    var alertEnabled: Boolean
-        get() = prefs.getBoolean(KEY_ALERT, DuressConfig.DEFAULT_ALERT_ENABLED)
-        set(value) = prefs.edit().putBoolean(KEY_ALERT, value).apply()
+    /** Whether a trigger source is enabled at all. */
+    fun triggerEnabled(t: Trigger): Boolean = when (t) {
+        Trigger.HARDWARE -> hardwareTriggerEnabled
+        Trigger.QS_TILE -> qsTileEnabled
+        Trigger.DECOY_PIN -> decoyPinEnabled
+    }
 
-    var captureEnabled: Boolean
-        get() = prefs.getBoolean(KEY_CAPTURE, DuressConfig.DEFAULT_CAPTURE_ENABLED)
-        set(value) = prefs.edit().putBoolean(KEY_CAPTURE, value).apply()
+    // --- Per-trigger responses ---
+    // Each (trigger, response) pair is its own flag. Alert/Capture default on, Wipe defaults off.
 
-    var wipeEnabled: Boolean
-        get() = prefs.getBoolean(KEY_WIPE, DuressConfig.DEFAULT_WIPE_ENABLED)
-        set(value) = prefs.edit().putBoolean(KEY_WIPE, value).apply()
+    fun getResponse(t: Trigger, r: Response): Boolean {
+        val default = r != Response.WIPE
+        return prefs.getBoolean(responseKey(t, r), default)
+    }
+
+    fun setResponse(t: Trigger, r: Response, value: Boolean) {
+        prefs.edit().putBoolean(responseKey(t, r), value).apply()
+    }
+
+    /** The responses configured for the given trigger source (empty if the trigger is disabled). */
+    fun responsesFor(source: String): Set<Response> {
+        val t = Trigger.fromSource(source) ?: return emptySet()
+        if (!triggerEnabled(t)) return emptySet()
+        return Response.entries.filter { getResponse(t, it) }.toSet()
+    }
+
+    private fun responseKey(t: Trigger, r: Response) = "resp_${t.key}_${r.name.lowercase()}"
 
     // --- Alert delivery ---
 
@@ -91,9 +110,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_WINDOW_MS = "trigger_window_ms"
         private const val KEY_HW_TRIGGER = "hardware_trigger_enabled"
         private const val KEY_QS_TILE = "qs_tile_enabled"
-        private const val KEY_ALERT = "alert_enabled"
-        private const val KEY_CAPTURE = "capture_enabled"
-        private const val KEY_WIPE = "wipe_enabled"
+        private const val KEY_PIN_TRIGGER = "decoy_pin_enabled"
         private const val KEY_ALERT_CONTACT = "alert_contact"
         private const val KEY_ALERT_MESSAGE = "alert_message"
         private const val KEY_INACTIVITY_ENABLED = "inactivity_enabled"

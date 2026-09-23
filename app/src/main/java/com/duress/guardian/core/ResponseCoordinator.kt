@@ -7,9 +7,9 @@ import com.duress.guardian.response.AlertSender
 import com.duress.guardian.response.EvidenceCapture
 
 /**
- * Single entry point for "a duress trigger fired". Every trigger source — decoy PIN, hardware
- * button pattern, Quick Settings tile — funnels through here, so the response policy lives in
- * exactly one place and is easy to audit. Which actions fire is read live from [SettingsRepository].
+ * Single entry point for "a duress trigger fired". Every trigger source funnels through here.
+ * Which responses run is decided per-trigger via [SettingsRepository.responsesFor], so each trigger
+ * (hardware button, QS tile, decoy PIN) can independently fire alert / capture / wipe.
  */
 object ResponseCoordinator {
 
@@ -17,15 +17,16 @@ object ResponseCoordinator {
 
     fun fire(context: Context, source: String) {
         val settings = SettingsRepository(context)
-        Log.i(TAG, "Duress trigger fired from: $source")
+        val responses = settings.responsesFor(source)
+        Log.i(TAG, "Duress trigger fired from: $source -> $responses")
 
-        if (settings.alertEnabled) {
+        if (Response.ALERT in responses) {
             AlertSender.send(context, source)
         }
-        if (settings.captureEnabled) {
+        if (Response.CAPTURE in responses) {
             EvidenceCapture.start(context)
         }
-        if (settings.wipeEnabled) {
+        if (Response.WIPE in responses) {
             val wiped = WipeController(context).wipe()
             Log.i(TAG, "wipe requested, executed=$wiped")
         }

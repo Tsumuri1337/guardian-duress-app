@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/responses_header"
+        android:textStyle="bold" />
+
+    <CheckBox
+        android:id="@+id/cbAlert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/resp_alert" />
+
+    <CheckBox
+        android:id="@+id/cbCapture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/resp_capture" />
+
+    <CheckBox
+        android:id="@+id/cbWipe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/resp_wipe" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/resp_wipe_warn"
+        android:textColor="#C62828"
+        android:textSize="12sp" />
+</LinearLayout>

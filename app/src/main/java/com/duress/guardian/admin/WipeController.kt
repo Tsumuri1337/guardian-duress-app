@@ -3,6 +3,7 @@ package com.duress.guardian.admin
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import android.util.Log
 
 /**
@@ -33,13 +34,21 @@ class WipeController(private val context: Context) {
             Log.w(TAG, "wipe() called but app is not Device Owner — ignoring")
             return false
         }
+        // WIPE_RESET_PROTECTION_DATA clears Factory Reset Protection as part of the wipe, so the
+        // device comes back account-free and immediately re-provisionable for the next test.
+        val flags = DevicePolicyManager.WIPE_RESET_PROTECTION_DATA
         return try {
-            // WIPE_RESET_PROTECTION_DATA clears Factory Reset Protection as part of the wipe, so the
-            // device comes back account-free and immediately re-provisionable for the next test.
-            dpm.wipeData(DevicePolicyManager.WIPE_RESET_PROTECTION_DATA)
+            // Android 14+ (API 34): a Device Owner must call wipeDevice() to factory-reset the whole
+            // device. The old wipeData() only removes the calling user and throws for user 0.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                dpm.wipeDevice(flags)
+            } else {
+                @Suppress("DEPRECATION")
+                dpm.wipeData(flags)
+            }
             true
         } catch (e: SecurityException) {
-            Log.e(TAG, "wipeData denied", e)
+            Log.e(TAG, "wipe denied", e)
             false
         }
     }
