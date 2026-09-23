@@ -2,7 +2,7 @@
 
 A stock-Android duress app: on a **user-initiated** duress signal it can alert contacts, capture
 evidence, re-seal the app's own data, and — on a provisioned device — factory-reset the phone.
-Built as a student + professor research project, tested on a **dedicated** Samsung Galaxy S25 Ultra
+Built as a research project, tested on a **dedicated** Samsung Galaxy S25 Ultra
 (One UI 7 / Android 15).
 
 ---
