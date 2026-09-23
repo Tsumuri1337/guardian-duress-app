@@ -75,4 +75,20 @@
     <string name="resp_capture">Capture evidence</string>
     <string name="resp_wipe">Factory reset the device</string>
     <string name="resp_wipe_warn">Destructive. Needs Device Owner. Erases the phone.</string>
+
+    <!-- Timed action (timer / dead-man) -->
+    <string name="timer_title">Timed action</string>
+    <string name="timer_sub">Fire a response on a timer or after inactivity</string>
+    <string name="mode_deadman">Dead-man\'s switch — resets when you use the phone</string>
+    <string name="mode_fixed">Fixed timer — fires no matter what</string>
+    <string name="duration_label">Duration (days : hours : minutes : seconds)</string>
+    <string name="d">D</string>
+    <string name="h">H</string>
+    <string name="m">M</string>
+    <string name="s">S</string>
+    <string name="dhms_hint">Minimum 30 seconds. Leave a field blank for 0.</string>
+    <string name="reset">Reset</string>
+    <string name="err_timer_range">Duration must be between 30 seconds and 30 days.</string>
+    <string name="timer_warn_title">Guardian timer</string>
+    <string name="timer_warn_body">Runs its action in about %1$d minute(s).</string>
 </resources>

@@ -14,8 +14,8 @@ import com.duress.guardian.R
 import com.duress.guardian.databinding.ActivitySettingsBinding
 import com.duress.guardian.databinding.DialogAlertBinding
 import com.duress.guardian.databinding.DialogHardwareBinding
-import com.duress.guardian.databinding.DialogInactivityBinding
 import com.duress.guardian.databinding.DialogResponsesBinding
+import com.duress.guardian.databinding.DialogTimerBinding
 import com.duress.guardian.watchdog.InactivityWatchdog
 
 /**
@@ -47,8 +47,9 @@ class SettingsActivity : AppCompatActivity() {
         bindToggle(binding.swDecoy, binding.btnConfigDecoy, settings.decoyPinEnabled) {
             settings.decoyPinEnabled = it
         }
-        bindToggle(binding.swInactivity, binding.btnConfigInactivity, settings.inactivityWipeEnabled) {
-            settings.inactivityWipeEnabled = it
+        bindToggle(binding.swInactivity, binding.btnConfigInactivity, settings.timerEnabled) {
+            settings.timerEnabled = it
+            if (it) settings.timerArmedAt = 0L   // arm fresh on enable
             InactivityWatchdog.reschedule(this)
         }
 
@@ -57,7 +58,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnConfigQs.setOnClickListener { configureResponses(Trigger.QS_TILE, R.string.section_tile) }
         binding.btnConfigDecoy.setOnClickListener { configureResponses(Trigger.DECOY_PIN, R.string.section_decoy) }
         binding.btnConfigAlert.setOnClickListener { configureAlert() }
-        binding.btnConfigInactivity.setOnClickListener { configureInactivity() }
+        binding.btnConfigInactivity.setOnClickListener { configureTimer() }
     }
 
     private fun bindToggle(
@@ -137,22 +138,39 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun configureInactivity() {
-        val d = DialogInactivityBinding.inflate(layoutInflater)
-        d.etInactivityHours.setText(settings.inactivityHours.toString())
+    private fun configureTimer() {
+        val d = DialogTimerBinding.inflate(layoutInflater)
+        // mode
+        if (settings.timerMode == TimerMode.FIXED) d.rbFixed.isChecked = true else d.rbDeadman.isChecked = true
+        // duration -> d:h:m:s
+        var s = settings.timerDurationMs / 1000L
+        d.etDays.setText((s / 86400L).toString()); s %= 86400L
+        d.etHours.setText((s / 3600L).toString()); s %= 3600L
+        d.etMinutes.setText((s / 60L).toString())
+        d.etSeconds.setText((s % 60L).toString())
+        loadResponses(d.cbAlert, d.cbCapture, d.cbWipe, Trigger.TIMER)
+
+        d.btnReset.setOnClickListener {
+            d.etDays.text?.clear(); d.etHours.text?.clear(); d.etMinutes.text?.clear(); d.etSeconds.text?.clear()
+        }
+
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.section_inactivity)
+            .setTitle(R.string.timer_title)
             .setView(d.root)
             .setPositiveButton(R.string.save_short, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val hours = d.etInactivityHours.text.toString().toIntOrNull()
-                if (hours == null || hours !in DuressConfig.INACTIVITY_MIN_HOURS..DuressConfig.INACTIVITY_MAX_HOURS) {
-                    toast(getString(R.string.err_inactivity_hours, DuressConfig.INACTIVITY_MIN_HOURS, DuressConfig.INACTIVITY_MAX_HOURS)); return@setOnClickListener
+                fun v(cb: android.widget.EditText) = cb.text.toString().toLongOrNull() ?: 0L
+                val durationMs = (((v(d.etDays) * 24 + v(d.etHours)) * 60 + v(d.etMinutes)) * 60 + v(d.etSeconds)) * 1000L
+                if (durationMs !in DuressConfig.TIMER_MIN_MS..DuressConfig.TIMER_MAX_MS) {
+                    toast(getString(R.string.err_timer_range)); return@setOnClickListener
                 }
-                settings.inactivityHours = hours
+                settings.timerMode = if (d.rbFixed.isChecked) TimerMode.FIXED else TimerMode.DEADMAN
+                settings.timerDurationMs = durationMs
+                saveResponses(d.cbAlert, d.cbCapture, d.cbWipe, Trigger.TIMER)
+                settings.timerArmedAt = 0L // re-arm fresh with the new settings
                 InactivityWatchdog.reschedule(this)
                 dialog.dismiss()
             }

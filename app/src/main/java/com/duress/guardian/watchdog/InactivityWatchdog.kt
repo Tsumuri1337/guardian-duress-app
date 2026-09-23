@@ -10,21 +10,21 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.duress.guardian.R
-import com.duress.guardian.admin.WipeController
+import com.duress.guardian.core.ResponseCoordinator
+import com.duress.guardian.core.Response
 import com.duress.guardian.core.SettingsRepository
+import com.duress.guardian.core.TimerMode
+import com.duress.guardian.core.Trigger
 
 /**
- * The inactivity auto-wipe ("dead-man's switch"). If the device isn't unlocked for
- * [SettingsRepository.inactivityHours], it wipes — but only after a grace window during which a
- * warning is shown and any unlock aborts it, and only if the app is Device Owner.
+ * Drives the timed action — either a **dead-man's switch** (fires after inactivity; any unlock
+ * resets it) or a **fixed timer** (fires after real time from when armed; unlocking does not reset
+ * it). When it fires it runs the responses configured for [Trigger.TIMER] (alert / capture / wipe),
+ * after a grace window with a warning. In dead-man mode, unlocking during grace aborts.
  *
- * Two AlarmManager phases:
- *  - MAIN  : fires at lastUnlock + threshold. If still idle, shows the warning and arms GRACE.
- *  - GRACE : fires after the grace window. If still idle (no unlock happened), performs the wipe.
- *
- * Any unlock ([onUnlock]) records the time, cancels a pending warning/grace, and re-arms MAIN.
- * Alarms are inexact-but-Doze-friendly (setAndAllowWhileIdle), so no exact-alarm permission is
- * needed — minute-level drift is irrelevant for a timer measured in hours.
+ * Two AlarmManager phases: MAIN fires at anchor + duration; if still due it shows the warning and
+ * arms GRACE, which then fires the response. Alarms use setAndAllowWhileIdle (no exact-alarm
+ * permission needed). It is one-shot: after firing it disables itself so it can't loop.
  */
 object InactivityWatchdog {
 
@@ -32,19 +32,20 @@ object InactivityWatchdog {
     private const val WARN_CHANNEL = "guardian_warning"
     private const val WARN_NOTIF_ID = 2001
 
-    private const val ACTION_ALARM = "com.duress.guardian.INACTIVITY_ALARM"
     private const val EXTRA_PHASE = "phase"
     private const val PHASE_MAIN = "main"
     private const val PHASE_GRACE = "grace"
-
     private const val RC_MAIN = 1001
     private const val RC_GRACE = 1002
 
-    /** Record an unlock and re-arm the timer from now. Called on device/app unlock. */
+    /** Record an unlock. In dead-man mode this resets the countdown; a fixed timer ignores it. */
     fun onUnlock(context: Context) {
-        SettingsRepository(context).recordUnlock()
-        cancelWarning(context)
-        reschedule(context)
+        val settings = SettingsRepository(context)
+        settings.recordUnlock()
+        if (settings.timerMode == TimerMode.DEADMAN) {
+            cancelWarning(context)
+            reschedule(context)
+        }
     }
 
     /** Arm (or cancel) the MAIN alarm to match current settings. Safe to call repeatedly. */
@@ -53,48 +54,55 @@ object InactivityWatchdog {
         val settings = SettingsRepository(context)
 
         cancelAlarm(context, am, RC_GRACE, PHASE_GRACE)
-        if (!settings.inactivityWipeEnabled) {
+        if (!settings.timerEnabled) {
             cancelAlarm(context, am, RC_MAIN, PHASE_MAIN)
-            Log.i(TAG, "Inactivity wipe disabled — timer cancelled")
+            Log.i(TAG, "Timer disabled — cancelled")
             return
         }
 
-        val last = settings.lastUnlockAt
-        if (last == 0L) {
-            // No unlock seen yet — anchor to now so the switch can't fire prematurely.
-            settings.recordUnlock()
+        // Make sure the anchor exists so we never fire prematurely.
+        when (settings.timerMode) {
+            TimerMode.DEADMAN -> if (settings.lastUnlockAt == 0L) settings.recordUnlock()
+            TimerMode.FIXED -> if (settings.timerArmedAt == 0L) settings.timerArmedAt = System.currentTimeMillis()
         }
-        val deadline = InactivityPolicy.deadline(settings.lastUnlockAt, settings.inactivityThresholdMs)
+        val deadline = InactivityPolicy.deadline(settings.timerAnchor(), settings.timerDurationMs)
         scheduleAlarm(context, am, RC_MAIN, PHASE_MAIN, deadline)
-        Log.i(TAG, "Inactivity MAIN armed for ${deadline} (in ${(deadline - System.currentTimeMillis()) / 1000}s)")
+        Log.i(TAG, "Timer(${settings.timerMode}) armed for $deadline (in ${(deadline - System.currentTimeMillis()) / 1000}s)")
     }
 
     /** Alarm callback, dispatched from [InactivityReceiver]. */
     fun onAlarm(context: Context, phase: String) {
         val settings = SettingsRepository(context)
-        if (!settings.inactivityWipeEnabled) return
+        if (!settings.timerEnabled) return
         val now = System.currentTimeMillis()
-        val expired = InactivityPolicy.isExpired(now, settings.lastUnlockAt, settings.inactivityThresholdMs)
+        val due = InactivityPolicy.isExpired(now, settings.timerAnchor(), settings.timerDurationMs)
 
         when (phase) {
             PHASE_MAIN -> {
-                if (expired) {
-                    Log.w(TAG, "Inactivity threshold reached — entering ${settings.inactivityGraceMs / 1000}s grace")
-                    showWarning(context, settings.inactivityGraceMs)
+                if (due) {
+                    val wipe = settings.getResponse(Trigger.TIMER, Response.WIPE)
+                    Log.w(TAG, "Timer due — ${settings.timerGraceMs / 1000}s grace (wipe=$wipe)")
+                    showWarning(context, settings.timerGraceMs, wipe)
                     val am = context.getSystemService(AlarmManager::class.java)
-                    scheduleAlarm(context, am, RC_GRACE, PHASE_GRACE, now + settings.inactivityGraceMs)
+                    scheduleAlarm(context, am, RC_GRACE, PHASE_GRACE, now + settings.timerGraceMs)
                 } else {
-                    reschedule(context) // unlocked since arming — push the deadline out
+                    reschedule(context) // used since arming (dead-man) — push out
                 }
             }
             PHASE_GRACE -> {
                 cancelWarning(context)
-                if (expired) {
-                    val wiped = WipeController(context).wipe()
-                    Log.w(TAG, "Inactivity grace elapsed — wipe requested, executed=$wiped")
-                } else {
-                    Log.i(TAG, "Unlocked during grace — wipe aborted")
+                val abort = settings.timerMode == TimerMode.DEADMAN && !due
+                if (abort) {
+                    Log.i(TAG, "Unlocked during grace — aborted")
                     reschedule(context)
+                } else {
+                    Log.w(TAG, "Grace elapsed — firing timer responses")
+                    ResponseCoordinator.fire(context, Trigger.TIMER.source)
+                    // One-shot: disable so a non-wipe timer can't loop. Re-enable to re-arm.
+                    settings.timerEnabled = false
+                    settings.timerArmedAt = 0L
+                    val am = context.getSystemService(AlarmManager::class.java)
+                    cancelAlarm(context, am, RC_MAIN, PHASE_MAIN)
                 }
             }
         }
@@ -103,7 +111,7 @@ object InactivityWatchdog {
     // --- alarms ---
 
     private fun alarmIntent(context: Context, phase: String) =
-        Intent(context, InactivityReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_PHASE, phase)
+        Intent(context, InactivityReceiver::class.java).putExtra(EXTRA_PHASE, phase)
 
     private fun pending(context: Context, requestCode: Int, phase: String): PendingIntent =
         PendingIntent.getBroadcast(
@@ -121,7 +129,7 @@ object InactivityWatchdog {
 
     // --- warning notification ---
 
-    private fun showWarning(context: Context, graceMs: Long) {
+    private fun showWarning(context: Context, graceMs: Long, wipe: Boolean) {
         val mgr = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mgr.createNotificationChannel(
@@ -129,9 +137,13 @@ object InactivityWatchdog {
             )
         }
         val minutes = (graceMs / 60000L).coerceAtLeast(1)
+        val title = context.getString(if (wipe) R.string.inactivity_warn_title else R.string.timer_warn_title)
+        val body = context.getString(
+            if (wipe) R.string.inactivity_warn_body else R.string.timer_warn_body, minutes
+        )
         val notif = NotificationCompat.Builder(context, WARN_CHANNEL)
-            .setContentTitle(context.getString(R.string.inactivity_warn_title))
-            .setContentText(context.getString(R.string.inactivity_warn_body, minutes))
+            .setContentTitle(title)
+            .setContentText(body)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)

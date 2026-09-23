@@ -91,8 +91,8 @@
         <!-- ===== Inactivity auto-wipe ===== -->
         <LinearLayout style="@style/RowContainer">
             <LinearLayout style="@style/RowText">
-                <TextView style="@style/RowTitle" android:text="@string/section_inactivity" />
-                <TextView style="@style/RowSub" android:text="@string/inactivity_sub" />
+                <TextView style="@style/RowTitle" android:text="@string/timer_title" />
+                <TextView style="@style/RowSub" android:text="@string/timer_sub" />
             </LinearLayout>
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/swInactivity"

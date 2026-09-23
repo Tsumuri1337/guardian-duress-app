@@ -28,19 +28,13 @@ object DuressConfig {
     const val DEFAULT_HARDWARE_TRIGGER_ENABLED = true
     const val DEFAULT_QS_TILE_ENABLED = true
 
-    // Which response actions fire by default
-    const val DEFAULT_ALERT_ENABLED = true
-    const val DEFAULT_CAPTURE_ENABLED = true
-    const val DEFAULT_WIPE_ENABLED = false
-
     // Default covert-alert message. "%s" is replaced with a Google Maps link to the last location.
     const val DEFAULT_ALERT_MESSAGE = "I am in danger and need help. My location: %s"
 
-    // Inactivity auto-wipe ("dead-man's switch"): wipe if the device isn't unlocked for a while.
-    const val DEFAULT_INACTIVITY_WIPE_ENABLED = false
-    const val DEFAULT_INACTIVITY_HOURS = 72          // 3 days
-    const val INACTIVITY_MIN_HOURS = 1
-    const val INACTIVITY_MAX_HOURS = 720             // 30 days
-    // Grace window after the timer expires: a warning is shown and unlocking within it aborts.
-    const val DEFAULT_INACTIVITY_GRACE_MS = 15 * 60 * 1000L   // 15 minutes
+    // Timed action (dead-man's switch or fixed timer). Duration is entered as d:h:m:s.
+    const val DEFAULT_TIMER_DURATION_MS = 72L * 60L * 60L * 1000L      // 3 days
+    const val TIMER_MIN_MS = 30L * 1000L                              // 30 seconds
+    const val TIMER_MAX_MS = 30L * 24L * 60L * 60L * 1000L            // 30 days
+    // Grace window after the timer expires: a warning is shown (dead-man mode: unlocking aborts).
+    const val DEFAULT_TIMER_GRACE_MS = 15L * 60L * 1000L              // 15 minutes
 }

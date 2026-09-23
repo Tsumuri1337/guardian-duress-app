@@ -29,4 +29,23 @@
         <item name="android:textSize">13sp</item>
         <item name="android:alpha">0.7</item>
     </style>
+
+    <style name="TimeField">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:inputType">number</item>
+        <item name="android:maxLength">2</item>
+        <item name="android:gravity">center</item>
+        <item name="android:autofillHints"></item>
+        <item name="android:importantForAutofill">no</item>
+    </style>
+
+    <style name="TimeColon">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:textSize">18sp</item>
+    </style>
 </resources>
