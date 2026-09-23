@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">Guardian</string>
+    <string name="service_notification_title">System service running</string>
+    <string name="pin_hint">Enter PIN</string>
+    <string name="confirm_hint">Re-enter to confirm</string>
+    <string name="submit">Unlock</string>
+    <string name="unlocked_real">Unlocked</string>
+    <string name="status_locked">Locked</string>
+    <string name="change_pins">Change PINs</string>
+    <string name="vault_title">Notes</string>
+    <string name="new_note_hint">New note</string>
+    <string name="add">Add</string>
+
+    <!-- Setup flow -->
+    <string name="setup_title">Set up your PINs</string>
+    <string name="pin_rules">PINs must be %1$d–%2$d digits. Your real and duress PINs must be different.</string>
+    <string name="real_pin_label">Real PIN — unlocks normally</string>
+    <string name="duress_pin_label">Duress PIN — silently triggers the safety response</string>
+    <string name="duress_pin_hint_desc">Enter this when under coercion. It looks identical to a normal unlock.</string>
+    <string name="save">Save PINs</string>
+    <string name="pins_saved">PINs saved</string>
+    <string name="pin_length_error">Each PIN must be %1$d to %2$d digits.</string>
+    <string name="pin_real_mismatch">Real PIN entries don\'t match.</string>
+    <string name="pin_duress_mismatch">Duress PIN entries don\'t match.</string>
+    <string name="pin_must_differ">Real and duress PINs must be different.</string>
+    <string name="device_admin_label">Guardian device admin</string>
+    <string name="device_admin_description">Allows Guardian to factory-reset this device when a duress trigger fires.</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_title">Trigger &amp; response settings</string>
+    <string name="section_hardware">Hardware-button trigger</string>
+    <string name="hw_trigger_enabled">Enable power-button trigger</string>
+    <string name="press_count_label">Number of rapid presses to trigger</string>
+    <string name="window_label">Within how many seconds</string>
+    <string name="section_tile">Quick Settings tile</string>
+    <string name="qs_tile_enabled">Enable Quick Settings tile trigger</string>
+    <string name="section_responses">Responses when triggered</string>
+    <string name="alert_enabled">Send covert alert to contacts</string>
+    <string name="capture_enabled">Capture evidence</string>
+    <string name="wipe_enabled">Factory reset the device</string>
+    <string name="wipe_warning">DESTRUCTIVE. Only works when the app is Device Owner. Erases the phone. Leave off unless deliberately testing the wipe.</string>
+    <string name="save_settings">Save settings</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="err_press_count">Presses must be between %1$d and %2$d.</string>
+    <string name="err_window">Window must be between %1$d and %2$d seconds.</string>
+    <string name="section_alert_delivery">Alert delivery</string>
+    <string name="contact_label">Emergency contact number</string>
+    <string name="contact_hint">e.g. +15551234567</string>
+    <string name="message_label">Alert message</string>
+    <string name="message_hint_desc">A map link to your location is appended where %s appears (or at the end).</string>
+    <string name="err_contact_needed">Enter an emergency contact number, or turn off \"Send covert alert\".</string>
+    <string name="perm_rationale">To send the covert alert with your location, allow SMS and Location when prompted.</string>
+</resources>
