@@ -100,24 +100,28 @@ test factory-resets the phone**, dropping it back to the empty state — re-prov
 ## 7. Status
 
 **Working:**
-- Dual-PIN lock with user-chosen PINs (salted PBKDF2) and a guided setup / change-PINs flow.
-- In-app Settings: configurable press count & window, per-trigger toggles, per-response toggles,
-  alert contact + message, inactivity threshold. Read live at fire-time.
+- Dual-PIN lock with user-chosen PINs; hashes are salted PBKDF2 **and** encrypted at rest with a
+  hardware-bound Android Keystore key (`core/CryptoBox.kt`).
+- In-app Settings: compact toggle rows + per-feature Configure dialogs. Each trigger independently
+  selects its responses (alert / capture / wipe).
 - Trigger sources: decoy PIN, hardware button, QS tile — all funnel through `ResponseCoordinator`.
-- Covert alert: last-known location (LocationManager) + preset message sent via SMS. Runtime
-  permissions requested in Settings.
-- Decoy content: separate real / decoy notes vaults.
-- Inactivity auto-wipe (dead-man's switch) with grace + warning; decision logic unit-tested.
-- Guarded factory reset (Device Owner only), default-off.
+- Timed action: **dead-man's switch** (fires on inactivity, resets on use) or **fixed timer**
+  (fires after real time regardless of use), entered as days:hours:minutes:seconds, with grace +
+  warning; fires its configured responses. Decision logic unit-tested.
+- Covert alert: last-known location + preset message over SMS.
+- Evidence capture: records audio to app-private storage via a `microphone` foreground service.
+- Decoy content: separate real / decoy notes vaults, encrypted at rest.
+- First-run flow requests all needed permissions + battery-optimization exemption.
+- Guarded factory reset via Device Owner (`wipeDevice()` on Android 14+), per-trigger, default-off.
 
 **Validated on-device (OnePlus 10 Pro, OxygenOS 15 / Android 15):**
-- All three triggers fire (decoy PIN, 6× power button, QS tile).
+- All three triggers fire (decoy PIN, power button, QS tile).
 - Covert alert sends over SMS with location; fail-safe when no contact set.
-- Inactivity cycle (arm → warn → grace → wipe request) verified in-log (wipe no-op without Device
-  Owner).
+- Reboot persistence: `BootReceiver` restarts the listener; trigger fires after reboot.
+- Device Owner factory reset actually wipes the device (via `wipeDevice()`), including from the
+  hardware button.
 
 **Not yet done:**
-- `EvidenceCapture` — still a stub (Phase 2).
-- Hardening: move PIN hashes / notes to Android Keystore-backed encryption.
-- On-device: reboot persistence under OxygenOS battery management; Device Owner factory-reset.
+- Evidence capture: periodic photo capture (audio ships now).
+- On-device: long-term listener survival under OxygenOS battery management.
 - Track 2: the rooted LSPosed lockscreen-duress-PIN module.

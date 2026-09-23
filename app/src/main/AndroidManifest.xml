@@ -15,14 +15,14 @@
     <!-- Ask to be exempt from battery optimization (needed for the listener to persist). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Phase 2 capture (uncomment when implementing evidence capture):
+    <!-- Evidence capture: audio -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <application
         android:allowBackup="false"
-        android:icon="@android:drawable/ic_lock_lock"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Guardian"
@@ -63,11 +63,17 @@
                 android:value="duress-trigger-listener" />
         </service>
 
+        <!-- Evidence capture (audio) foreground service. -->
+        <service
+            android:name=".response.CaptureService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <!-- Quick Settings tile trigger source. -->
         <service
             android:name=".tile.DuressTileService"
             android:exported="true"
-            android:icon="@android:drawable/ic_lock_lock"
+            android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

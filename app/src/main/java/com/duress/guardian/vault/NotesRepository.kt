@@ -1,12 +1,14 @@
 package com.duress.guardian.vault
 
 import android.content.Context
+import com.duress.guardian.core.CryptoBox
 import org.json.JSONArray
 
 /**
- * Stores two completely separate note lists: the real vault and the decoy vault. The decoy list is
- * seeded with innocuous, plausible entries the first time it is opened, so a coerced unlock shows a
- * believable, ordinary notes app — never an empty or obviously-fake screen.
+ * Stores two completely separate note lists: the real vault and the decoy vault, each encrypted at
+ * rest with a hardware-bound Android Keystore key ([CryptoBox]). The decoy list is seeded with
+ * innocuous, plausible entries the first time it is opened, so a coerced unlock shows a believable,
+ * ordinary notes app — never an empty or obviously-fake screen.
  *
  * The two lists never mix: real notes are only ever read/written in real mode, decoy notes only in
  * decoy mode, so someone holding the phone under the duress PIN can't see or reach the real data.
@@ -22,7 +24,8 @@ class NotesRepository(context: Context) {
             return DECOY_SEED
         }
         val raw = prefs.getString(key, null) ?: return emptyList()
-        val arr = JSONArray(raw)
+        val json = runCatching { CryptoBox.decryptString(raw) }.getOrNull() ?: return emptyList()
+        val arr = JSONArray(json)
         return (0 until arr.length()).map { arr.getString(it) }
     }
 
@@ -34,7 +37,7 @@ class NotesRepository(context: Context) {
     private fun saveNotes(decoy: Boolean, notes: List<String>) {
         val arr = JSONArray()
         notes.forEach { arr.put(it) }
-        prefs.edit().putString(keyFor(decoy), arr.toString()).apply()
+        prefs.edit().putString(keyFor(decoy), CryptoBox.encryptString(arr.toString())).apply()
     }
 
     private fun keyFor(decoy: Boolean) = if (decoy) KEY_DECOY else KEY_REAL

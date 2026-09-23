@@ -1,18 +1,16 @@
 package com.duress.guardian.lock
 
 import android.content.Context
-import android.util.Base64
+import com.duress.guardian.core.CryptoBox
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * Stores salted PBKDF2 hashes of the real PIN and the duress PIN — never the PINs themselves.
- *
- * This is scaffold-grade: plain SharedPreferences holding only hashes. For production, back the
- * key material with the Android Keystore (hardware-backed) so the hashes cannot be lifted off a
- * rooted/imaged device. The verification is written to check both PINs regardless of which one
- * matches, to avoid leaking via timing which PIN was entered.
+ * Stores salted PBKDF2 hashes of the real PIN and the duress PIN — never the PINs themselves — and
+ * additionally encrypts those hashes at rest with a hardware-bound Android Keystore key ([CryptoBox]),
+ * so they cannot be lifted off a rooted/imaged device and brute-forced offline. Verification checks
+ * both PINs regardless of which one matches, to avoid leaking via timing which PIN was entered.
  */
 class PinRepository(context: Context) {
 
@@ -63,8 +61,8 @@ class PinRepository(context: Context) {
         return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
     }
 
-    private fun enc(b: ByteArray): String = Base64.encodeToString(b, Base64.NO_WRAP)
-    private fun dec(s: String): ByteArray = Base64.decode(s, Base64.NO_WRAP)
+    private fun enc(b: ByteArray): String = CryptoBox.encrypt(b)
+    private fun dec(s: String): ByteArray? = runCatching { CryptoBox.decrypt(s) }.getOrNull()
 
     companion object {
         private const val PREFS = "guardian_lock"

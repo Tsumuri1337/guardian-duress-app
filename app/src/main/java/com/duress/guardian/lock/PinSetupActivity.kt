@@ -70,12 +70,12 @@ class PinSetupActivity : AppCompatActivity() {
         val list = mutableListOf(
             Manifest.permission.SEND_SMS,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.RECORD_AUDIO
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             list.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-        // Note: RECORD_AUDIO / CAMERA are requested with EvidenceCapture once that ships.
         return list
     }
 

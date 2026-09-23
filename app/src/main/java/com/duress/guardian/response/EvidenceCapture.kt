@@ -4,17 +4,16 @@ import android.content.Context
 import android.util.Log
 
 /**
- * STUB — Phase 2. Captures timestamped evidence (audio and/or periodic photos) to encrypted local
- * storage, optionally uploaded.
+ * Starts covert evidence capture on a duress trigger. Currently records a short audio clip via
+ * [CaptureService] to app-internal storage. (Periodic photo capture via Camera2 is a planned
+ * addition; audio is the highest-value, most reliable evidence and ships first.)
  *
- * Planned implementation: a foreground service declaring the `microphone` / `camera` FGS types.
- *
- * Platform limitation to document, not fight: on Android 15 a microphone/camera privacy indicator
- * is shown while capturing and CANNOT be suppressed on a stock device. This is an OS guarantee, so
- * "capture" here is overt-to-the-OS-indicators, covert-to-normal-UI.
+ * Note: Android 15 shows a microphone privacy indicator while recording — it cannot be suppressed
+ * on a stock device, so capture is covert to ordinary UI, not to the OS indicators.
  */
 object EvidenceCapture {
     fun start(context: Context) {
-        Log.i("EvidenceCapture", "TODO: start evidence capture")
+        Log.i("EvidenceCapture", "Starting evidence capture")
+        CaptureService.start(context)
     }
 }
