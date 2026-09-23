@@ -13,8 +13,9 @@ object DuressConfig {
     const val PIN_MIN_LENGTH = 4
     const val PIN_MAX_LENGTH = 12
 
-    // Hardware-button trigger defaults (screen on/off toggles = power-button presses)
-    const val DEFAULT_TRIGGER_PRESS_COUNT = 5
+    // Hardware-button trigger defaults (screen on/off toggles = power-button presses).
+    // Default is 6, not 5, to avoid colliding with the OS "5 power presses = Emergency SOS" gesture.
+    const val DEFAULT_TRIGGER_PRESS_COUNT = 6
     const val DEFAULT_TRIGGER_WINDOW_MS = 3000L
 
     // Bounds for the configurable press count / window

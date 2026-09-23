@@ -34,7 +34,9 @@ class WipeController(private val context: Context) {
             return false
         }
         return try {
-            dpm.wipeData(0)
+            // WIPE_RESET_PROTECTION_DATA clears Factory Reset Protection as part of the wipe, so the
+            // device comes back account-free and immediately re-provisionable for the next test.
+            dpm.wipeData(DevicePolicyManager.WIPE_RESET_PROTECTION_DATA)
             true
         } catch (e: SecurityException) {
             Log.e(TAG, "wipeData denied", e)
