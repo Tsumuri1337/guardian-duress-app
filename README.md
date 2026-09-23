@@ -1,9 +1,14 @@
 # Guardian — duress-response app (research prototype)
 
 A stock-Android duress app: on a **user-initiated** duress signal it can alert contacts, capture
-evidence, re-seal the app's own data, and — on a provisioned device — factory-reset the phone.
-Built as a research project, tested on a **dedicated** Samsung Galaxy S25 Ultra
-(One UI 7 / Android 15).
+evidence, re-seal the app's own data, and — on a provisioned device — factory-reset the phone. It
+can also wipe on prolonged inactivity (a dead-man's switch). Built as a research project, validated
+on a **dedicated** OnePlus 10 Pro (OxygenOS 15 / Android 15).
+
+**Project direction (hybrid):** *Track 1* is this stock, deployable app (what a normal user could
+install). *Track 2* (planned) is a rooted **LSPosed** module that hooks the real system lockscreen
+to detect a duress PIN and broadcast to this app's `ResponseCoordinator` — lab-only, on the rooted
+OnePlus, since it can't ship to end users.
 
 ---
 
@@ -29,7 +34,7 @@ stalkerware. State this explicitly in any write-up.
   **own** lock screen (`PinLockActivity`).
 - Factory reset (`DevicePolicyManager.wipeData`) requires the app to be a **Device Owner**,
   provisioned via ADB on a freshly reset device with **no accounts** added. It cannot be granted on
-  a phone already signed into Google/Samsung.
+  a phone already signed into a Google/OEM account.
 - Background audio/photo capture works, but Android 15 shows a **mic/camera privacy indicator**
   that cannot be suppressed. "Covert" means no ordinary UI change — not invisible to the OS.
 
@@ -38,18 +43,23 @@ stalkerware. State this explicitly in any write-up.
 ```
 Trigger sources ─┐
   decoy PIN      │
-  hardware btns  ├─►  ResponseCoordinator.fire()  ─►  AlertSender     (stub, Phase 2)
+  hardware btns  ├─►  ResponseCoordinator.fire()  ─►  AlertSender     (SMS + location)
   QS tile        │        (single policy point)   ─►  EvidenceCapture (stub, Phase 2)
                  ┘                                 ─►  WipeController  (Device Owner only)
+
+  inactivity timer ─►  InactivityWatchdog ─(grace + warning)─►  WipeController
 ```
 
 | Area | File |
 |------|------|
 | Response policy (one audit point) | `core/ResponseCoordinator.kt` |
-| Feature flags incl. `wipeEnabled` | `core/DuressConfig.kt` |
-| Real/duress PIN (salted PBKDF2) | `lock/PinRepository.kt`, `lock/PinLockActivity.kt` |
+| Settings/defaults (live, user-editable) | `core/SettingsRepository.kt`, `core/DuressConfig.kt`, `core/SettingsActivity.kt` |
+| Real/duress PIN (salted PBKDF2) + setup | `lock/PinRepository.kt`, `lock/PinLockActivity.kt`, `lock/PinSetupActivity.kt` |
 | Hardware-button listener (screen on/off toggles) | `trigger/TriggerService.kt` |
 | Quick Settings tile | `tile/DuressTileService.kt` |
+| Covert alert (SMS + location) | `response/AlertSender.kt` |
+| Real/decoy notes vaults | `vault/VaultActivity.kt`, `vault/NotesRepository.kt` |
+| Inactivity dead-man's switch | `watchdog/InactivityWatchdog.kt`, `watchdog/InactivityPolicy.kt` |
 | Factory reset (guarded) | `admin/WipeController.kt`, `admin/DuressDeviceAdminReceiver.kt` |
 | Boot persistence | `trigger/BootReceiver.kt` |
 
@@ -60,41 +70,54 @@ Trigger sources ─┐
 - **`WipeController.wipe()` fails safe** (returns `false`) whenever the app isn't Device Owner.
 - Each response action (`alertEnabled`, `captureEnabled`, `wipeEnabled`) toggles independently so
   you can test them in isolation.
+- **Inactivity auto-wipe** is off by default, has its own toggle, is Device-Owner-gated, and only
+  fires after a **grace window with a visible warning** — any unlock aborts it, and it re-arms on
+  boot. The wipe additionally passes `WIPE_RESET_PROTECTION_DATA` so a test wipe leaves the device
+  re-provisionable (no Factory Reset Protection lock).
 
 ## 5. Build & run
 
-1. Open `C:\ClaudeCode\duress-app` in Android Studio; let it sync (it will fetch Gradle 8.9).
-2. Run on the emulator or a normal phone. First launch seeds demo PINs: **real = 1234, duress =
-   9999** (shown in a toast). Entering the duress PIN fires the response (visible in Logcat).
-3. The hardware-button trigger = **5 power-button presses within 3 s** (screen on/off toggles).
+1. Open `duress-app` in Android Studio; let it sync (it will fetch Gradle 8.9).
+2. Run on the emulator or a phone. First launch shows a **setup screen** where you choose your own
+   real and duress PINs (4–12 digits). Entering the duress PIN opens the decoy vault and fires the
+   response (visible in Logcat, tag `ResponseCoordinator`).
+3. The hardware-button trigger defaults to **6 power-button presses within 3 s** (screen on/off
+   toggles; 6 avoids the OS "5 presses = Emergency SOS" gesture). Tune it, and everything else, in
+   the in-app **Settings**.
 
 ## 6. Enabling the wipe path (dedicated test unit only)
 
-Only on the wiped, account-free S25:
+Only on the wiped, account-free test unit (the OnePlus):
 
 ```
 adb install app-debug.apk
 adb shell dpm set-device-owner com.duress.guardian/.admin.DuressDeviceAdminReceiver
 ```
 
-Then set `DuressConfig.wipeEnabled = true`, rebuild, and test. **Each successful wipe test factory-
-resets the phone**, dropping it back to the empty state — re-provision to test again.
+Then enable the wipe in **Settings** (or the inactivity auto-wipe) and test. **Each successful wipe
+test factory-resets the phone**, dropping it back to the empty state — re-provision to test again.
 
 ## 7. Status
 
-**Working & tested on emulator:**
+**Working:**
 - Dual-PIN lock with user-chosen PINs (salted PBKDF2) and a guided setup / change-PINs flow.
-- In-app Settings: configurable press count & window, per-trigger toggles (hardware button, QS
-  tile), per-response toggles, alert contact + message. Read live at fire-time.
-- Trigger sources: decoy PIN, hardware button (screen on/off toggles), QS tile — all funnel through
-  `ResponseCoordinator`.
-- Covert alert: last-known location (LocationManager) + preset message sent via SMS to the
-  configured contact. Runtime permissions requested in Settings.
-- Decoy content: separate real / decoy notes vaults. Real vault exposes management controls; the
-  decoy vault shows seeded plausible notes and no path to real data or config.
+- In-app Settings: configurable press count & window, per-trigger toggles, per-response toggles,
+  alert contact + message, inactivity threshold. Read live at fire-time.
+- Trigger sources: decoy PIN, hardware button, QS tile — all funnel through `ResponseCoordinator`.
+- Covert alert: last-known location (LocationManager) + preset message sent via SMS. Runtime
+  permissions requested in Settings.
+- Decoy content: separate real / decoy notes vaults.
+- Inactivity auto-wipe (dead-man's switch) with grace + warning; decision logic unit-tested.
 - Guarded factory reset (Device Owner only), default-off.
+
+**Validated on-device (OnePlus 10 Pro, OxygenOS 15 / Android 15):**
+- All three triggers fire (decoy PIN, 6× power button, QS tile).
+- Covert alert sends over SMS with location; fail-safe when no contact set.
+- Inactivity cycle (arm → warn → grace → wipe request) verified in-log (wipe no-op without Device
+  Owner).
 
 **Not yet done:**
 - `EvidenceCapture` — still a stub (Phase 2).
 - Hardening: move PIN hashes / notes to Android Keystore-backed encryption.
-- On-device validation: hardware-button trigger timing and Device Owner wipe on the real S25 Ultra.
+- On-device: reboot persistence under OxygenOS battery management; Device Owner factory-reset.
+- Track 2: the rooted LSPosed lockscreen-duress-PIN module.

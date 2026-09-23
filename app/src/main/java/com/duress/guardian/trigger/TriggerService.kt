@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import com.duress.guardian.R
 import com.duress.guardian.core.ResponseCoordinator
 import com.duress.guardian.core.SettingsRepository
+import com.duress.guardian.watchdog.InactivityWatchdog
 
 /**
  * Foreground service that detects the hardware-button duress pattern.
@@ -35,6 +36,8 @@ class TriggerService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_SCREEN_OFF -> registerPress(context)
+                // Device unlocked -> reset the inactivity dead-man's switch.
+                Intent.ACTION_USER_PRESENT -> InactivityWatchdog.onUnlock(context)
             }
         }
     }
@@ -46,6 +49,7 @@ class TriggerService : Service() {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
         }
         ContextCompat.registerReceiver(
             this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED

@@ -93,5 +93,10 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Inactivity auto-wipe alarm callbacks (internal). -->
+        <receiver
+            android:name=".watchdog.InactivityReceiver"
+            android:exported="false" />
     </application>
 </manifest>

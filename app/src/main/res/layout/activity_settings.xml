@@ -158,6 +158,44 @@
             android:text="@string/message_hint_desc"
             android:textSize="13sp" />
 
+        <!-- Inactivity auto-wipe (dead-man's switch) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/section_inactivity"
+            android:textStyle="bold" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swInactivity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/inactivity_enabled" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/inactivity_hours_label" />
+
+        <EditText
+            android:id="@+id/etInactivityHours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:inputType="number"
+            android:maxLength="3" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/inactivity_warning"
+            android:textColor="#C62828"
+            android:textSize="13sp" />
+
         <TextView
             android:id="@+id/error"
             android:layout_width="wrap_content"

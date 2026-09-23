@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.duress.guardian.core.ResponseCoordinator
 import com.duress.guardian.databinding.ActivityPinLockBinding
 import com.duress.guardian.vault.VaultActivity
+import com.duress.guardian.watchdog.InactivityWatchdog
 
 /**
  * App-level lock screen with two PINs:
@@ -36,7 +37,11 @@ class PinLockActivity : AppCompatActivity() {
 
         binding.submit.setOnClickListener {
             when (pins.verify(binding.pinInput.text.toString())) {
-                PinResult.REAL -> openVault(decoy = false)
+                PinResult.REAL -> {
+                    // A real unlock counts as activity — reset the inactivity dead-man's switch.
+                    InactivityWatchdog.onUnlock(applicationContext)
+                    openVault(decoy = false)
+                }
                 PinResult.DURESS -> {
                     // Fire BEFORE opening the decoy, so the response runs even if the phone is
                     // taken the instant the PIN is entered.

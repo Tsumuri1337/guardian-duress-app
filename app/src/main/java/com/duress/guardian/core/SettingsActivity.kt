@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.duress.guardian.R
 import com.duress.guardian.databinding.ActivitySettingsBinding
+import com.duress.guardian.watchdog.InactivityWatchdog
 
 /**
  * In-app settings for the trigger and response policy, plus alert delivery (contact + message).
@@ -45,6 +46,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.swWipe.isChecked = settings.wipeEnabled
         binding.etContact.setText(settings.alertContact)
         binding.etMessage.setText(settings.alertMessage)
+        binding.swInactivity.isChecked = settings.inactivityWipeEnabled
+        binding.etInactivityHours.setText(settings.inactivityHours.toString())
 
         binding.save.setOnClickListener { onSave() }
     }
@@ -64,6 +67,12 @@ class SettingsActivity : AppCompatActivity() {
         if (alertOn && contact.isBlank()) {
             return showError(getString(R.string.err_contact_needed))
         }
+        val inactivityOn = binding.swInactivity.isChecked
+        val inactivityHours = binding.etInactivityHours.text.toString().toIntOrNull()
+        if (inactivityOn && (inactivityHours == null ||
+                inactivityHours !in DuressConfig.INACTIVITY_MIN_HOURS..DuressConfig.INACTIVITY_MAX_HOURS)) {
+            return showError(getString(R.string.err_inactivity_hours, DuressConfig.INACTIVITY_MIN_HOURS, DuressConfig.INACTIVITY_MAX_HOURS))
+        }
 
         settings.hardwareTriggerEnabled = binding.swHardware.isChecked
         settings.triggerPressCount = count
@@ -74,6 +83,10 @@ class SettingsActivity : AppCompatActivity() {
         settings.wipeEnabled = binding.swWipe.isChecked
         settings.alertContact = contact
         settings.alertMessage = binding.etMessage.text.toString()
+        settings.inactivityWipeEnabled = inactivityOn
+        if (inactivityHours != null) settings.inactivityHours = inactivityHours
+        // Re-arm (or cancel) the dead-man's switch to match the new settings.
+        InactivityWatchdog.reschedule(this)
 
         binding.error.visibility = View.GONE
 

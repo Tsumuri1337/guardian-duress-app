@@ -56,6 +56,35 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_ALERT_MESSAGE, null) ?: DuressConfig.DEFAULT_ALERT_MESSAGE
         set(value) = prefs.edit().putString(KEY_ALERT_MESSAGE, value).apply()
 
+    // --- Inactivity auto-wipe (dead-man's switch) ---
+
+    var inactivityWipeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_INACTIVITY_ENABLED, DuressConfig.DEFAULT_INACTIVITY_WIPE_ENABLED)
+        set(value) = prefs.edit().putBoolean(KEY_INACTIVITY_ENABLED, value).apply()
+
+    var inactivityHours: Int
+        get() = prefs.getInt(KEY_INACTIVITY_HOURS, DuressConfig.DEFAULT_INACTIVITY_HOURS)
+            .coerceIn(DuressConfig.INACTIVITY_MIN_HOURS, DuressConfig.INACTIVITY_MAX_HOURS)
+        set(value) = prefs.edit().putInt(KEY_INACTIVITY_HOURS, value).apply()
+
+    /** Grace window (ms) after expiry before the wipe; stored so tests can shorten it. */
+    var inactivityGraceMs: Long
+        get() = prefs.getLong(KEY_INACTIVITY_GRACE_MS, DuressConfig.DEFAULT_INACTIVITY_GRACE_MS)
+        set(value) = prefs.edit().putLong(KEY_INACTIVITY_GRACE_MS, value).apply()
+
+    /** Threshold in milliseconds derived from [inactivityHours]. */
+    val inactivityThresholdMs: Long
+        get() = inactivityHours.toLong() * 60L * 60L * 1000L
+
+    /** Epoch millis of the last device/app unlock; 0 = never recorded. */
+    var lastUnlockAt: Long
+        get() = prefs.getLong(KEY_LAST_UNLOCK, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_UNLOCK, value).apply()
+
+    fun recordUnlock() {
+        lastUnlockAt = System.currentTimeMillis()
+    }
+
     companion object {
         private const val PREFS = "guardian_settings"
         private const val KEY_PRESS_COUNT = "trigger_press_count"
@@ -67,5 +96,9 @@ class SettingsRepository(context: Context) {
         private const val KEY_WIPE = "wipe_enabled"
         private const val KEY_ALERT_CONTACT = "alert_contact"
         private const val KEY_ALERT_MESSAGE = "alert_message"
+        private const val KEY_INACTIVITY_ENABLED = "inactivity_enabled"
+        private const val KEY_INACTIVITY_HOURS = "inactivity_hours"
+        private const val KEY_INACTIVITY_GRACE_MS = "inactivity_grace_ms"
+        private const val KEY_LAST_UNLOCK = "last_unlock_at"
     }
 }

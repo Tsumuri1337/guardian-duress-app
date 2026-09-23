@@ -51,4 +51,13 @@
     <string name="message_hint_desc">A map link to your location is appended where %s appears (or at the end).</string>
     <string name="err_contact_needed">Enter an emergency contact number, or turn off \"Send covert alert\".</string>
     <string name="perm_rationale">To send the covert alert with your location, allow SMS and Location when prompted.</string>
+
+    <!-- Inactivity auto-wipe -->
+    <string name="section_inactivity">Inactivity auto-wipe (dead-man\'s switch)</string>
+    <string name="inactivity_enabled">Wipe if the phone isn\'t unlocked for a while</string>
+    <string name="inactivity_hours_label">Wipe after this many hours of no unlock</string>
+    <string name="inactivity_warning">DESTRUCTIVE. Erases the phone automatically. A warning shows first and unlocking cancels it. Only works when the app is Device Owner.</string>
+    <string name="err_inactivity_hours">Inactivity hours must be between %1$d and %2$d.</string>
+    <string name="inactivity_warn_title">Unlock to keep your data</string>
+    <string name="inactivity_warn_body">This device will erase itself in about %1$d minute(s) unless you unlock it.</string>
 </resources>
