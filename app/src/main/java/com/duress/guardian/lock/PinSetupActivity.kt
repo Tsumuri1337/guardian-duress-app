@@ -1,12 +1,21 @@
 package com.duress.guardian.lock
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.duress.guardian.R
 import com.duress.guardian.core.DuressConfig
+import com.duress.guardian.core.SettingsRepository
 import com.duress.guardian.databinding.ActivityPinSetupBinding
 
 /**
@@ -17,6 +26,12 @@ class PinSetupActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPinSetupBinding
     private lateinit var pins: PinRepository
+
+    // After the runtime-permission dialogs finish, follow up with the battery-optimization request.
+    private val permLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            requestBatteryExemptionIfNeeded()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +46,53 @@ class PinSetupActivity : AppCompatActivity() {
         )
 
         binding.save.setOnClickListener { onSave() }
+
+        maybeRequestFirstRunPermissions()
+    }
+
+    /** On genuine first launch, request every permission the app may need, in one pass. */
+    private fun maybeRequestFirstRunPermissions() {
+        val settings = SettingsRepository(this)
+        if (settings.permissionsRequested) return
+        settings.permissionsRequested = true
+
+        val toRequest = neededRuntimePermissions().filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (toRequest.isNotEmpty()) {
+            permLauncher.launch(toRequest.toTypedArray())   // battery request follows in the callback
+        } else {
+            requestBatteryExemptionIfNeeded()
+        }
+    }
+
+    private fun neededRuntimePermissions(): List<String> {
+        val list = mutableListOf(
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            list.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        // Note: RECORD_AUDIO / CAMERA are requested with EvidenceCapture once that ships.
+        return list
+    }
+
+    /** Ask the OS to exempt the app from battery optimization — vital on OxygenOS for persistence. */
+    private fun requestBatteryExemptionIfNeeded() {
+        val pm = getSystemService(PowerManager::class.java) ?: return
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        } catch (e: Exception) {
+            // Some OEMs block this intent; the user can grant it manually in system settings.
+        }
     }
 
     private fun onSave() {

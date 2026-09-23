@@ -104,6 +104,11 @@ class SettingsRepository(context: Context) {
         lastUnlockAt = System.currentTimeMillis()
     }
 
+    /** True once the first-run permission request has been shown, so we don't nag on every launch. */
+    var permissionsRequested: Boolean
+        get() = prefs.getBoolean(KEY_PERMS_REQUESTED, false)
+        set(value) = prefs.edit().putBoolean(KEY_PERMS_REQUESTED, value).apply()
+
     companion object {
         private const val PREFS = "guardian_settings"
         private const val KEY_PRESS_COUNT = "trigger_press_count"
@@ -117,5 +122,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_INACTIVITY_HOURS = "inactivity_hours"
         private const val KEY_INACTIVITY_GRACE_MS = "inactivity_grace_ms"
         private const val KEY_LAST_UNLOCK = "last_unlock_at"
+        private const val KEY_PERMS_REQUESTED = "permissions_requested"
     }
 }
